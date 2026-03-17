@@ -12,6 +12,8 @@ router.post('/', createSchema, create);
 router.put('/profile/:id', updateSchema, update);
 router.put('/profile/password/:id', updateSchema, update);
 router.delete('/:id', _delete);
+router.get('/:id/activities', getActivities);
+
 
 module.exports = router;
 
@@ -30,15 +32,21 @@ function create(req, res, next) {
     .then(() => res.json({ message: 'User created'}))
     .catch(next);
 }
+// RIGHT: This catches the user object from the service and sends it
 function update(req, res, next) {
     userService.update(req.params.id, req.body)
-    .then(() => res.json({ message: 'User updated' }))
-    .catch(next);
+        .then(user => res.json(user)) 
+        .catch(next);
 }
 function _delete(req, res, next) {
     userService.delete(req.params.id)
     .then(() => res.json({ message: 'User deleted' }))
     .catch(next);
+}
+function getActivities(req, res, next) {
+    userService.getUserActivities(req.params.id, req.query)
+        .then(activities => res.json(activities))
+        .catch(next);
 }
 function createSchema(req, res, next) {
     const schema = Joi.object({

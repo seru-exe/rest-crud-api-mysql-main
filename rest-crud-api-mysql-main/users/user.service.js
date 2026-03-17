@@ -7,10 +7,36 @@ module.exports = {
     getById,
     create,
     update,
-    delete: _delete
+    delete: _delete,
+    getUserActivities,
+    logActivity
 };
     
+async function getUserActivities(userId, filters = {}) {
+    const user = await getUser(userId);
+    if (!user) throw new Error('User not found');
 
+    let whereClause = { userId };
+
+    // Apply optional filters such as action type and timestamp range
+    if (filters.actionType) {
+      whereClause.actionType = { [Op.like]: `%${filters.actionType}%` };
+    }
+    if (filters.startDate || filters.endDate) {
+        const startDate = filters.startDate ? new Date(filters.startDate) : new Date(0);
+        const endDate = filters.endDate ? new Date(filters.endDate) : new Date();
+        whereClause.timestamp = { [Op.between]: [startDate, endDate] };
+    }
+
+    try {
+        const activities = await db.ActivityLog.findAll({ where: whereClause });
+        return activities;
+    } catch (error) {
+        console.error('Error retrieving activities:', error);
+        throw new Error('Error retrieving activities');
+    }
+
+}
 
 async function logActivity(userId, actionType, ipAddress, browserInfo, updateDetails = '') {
     try {
