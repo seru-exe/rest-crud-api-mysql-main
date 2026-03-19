@@ -22,7 +22,8 @@ module.exports = {
     deactivate,
     reactivate,
     getPermission,
-    createPermission
+    createPermission,
+    clearAllLogs
 };
 
 //SIMPLE CRUD OPERATIONS
@@ -285,6 +286,7 @@ async function logActivity(userId, actionType, actionDetails, previousValue = nu
 }
 
 async function getUserActivities(userId, filters = {}) {
+    const { Op } = require('sequelize'); // Ensures Op is available for your filters
     let whereClause = { userId };
 
     if (filters.actionType) {
@@ -299,10 +301,22 @@ async function getUserActivities(userId, filters = {}) {
         };
     }
 
-    return await db.ActivityLog.findAll({ where: whereClause });
+    // ADDED: order: [['timestamp', 'DESC']] to show newest logs first
+    return await db.ActivityLog.findAll({ 
+        where: whereClause,
+        order: [['timestamp', 'DESC']] 
+    });
 }
+
 async function getAllActivities() {
     return await db.ActivityLog.findAll({ 
-        order: [['timestamp', 'DESC']] 
+        order: [['timestamp', 'DESC']] // This puts the newest logs at the top
+    });
+}
+
+async function clearAllLogs() {
+    await db.ActivityLog.destroy({ 
+        where: {}, 
+        truncate: true 
     });
 }

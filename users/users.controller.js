@@ -5,6 +5,8 @@ const validateRequest = require('_middleware/validate-request');
 const Role = require('_helpers/role');
 const userService = require('./user.service');
 
+// Add this high up in your router list
+router.delete('/activity/clear', clearLogs);
 router.get('/', getAll); 
 router.get('/search', search);
 router.get('/searchAll', searchAll);  
@@ -30,6 +32,8 @@ router.put('/:id/reactivate', reactivateUser);
 
 router.get('/:id/permission', getPermission);
 router.post('/:id/permission', createPermission);
+
+
 
 // FIX #3: Moved route registration here, before module.exports, and removed duplicate
 router.get('/logs/:id', getLogs);
@@ -252,5 +256,11 @@ function createPermission(req, res, next) {
 function getLogs(req, res, next) {
     userService.getUserActivities(req.params.id)
         .then(logs => res.json(logs))
+        .catch(next);
+}
+
+function clearLogs(req, res, next) {
+    userService.clearAllLogs()
+        .then(() => res.json({ message: 'All activity logs have been cleared' }))
         .catch(next);
 }
