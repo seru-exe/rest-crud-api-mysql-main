@@ -8,6 +8,7 @@ const userService = require('./user.service');
 router.get('/', getAll); 
 router.get('/search', search);
 router.get('/searchAll', searchAll);  
+router.get('/activity', getAllActivities);
 router.get('/:id', getById);
 router.post('/', createSchema, create);
 router.put('/:id', updateSchema, update);
@@ -46,10 +47,16 @@ function getById(req, res, next) {
         .catch(next);
 }
 function create(req, res, next) {
-    userService.create(req.body)
-        .then(() => res.json({ message: 'User created' }))
-        .catch(next);
+    userService.create({
+        ...req.body,
+        // These two lines are required for the log to see who/where the request came from
+        ipAddress: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+        browserInfo: req.headers['user-agent'] || 'Unknown Browser'
+    })
+    .then(() => res.json({ message: 'Registration successful' }))
+    .catch(next);
 }
+
 function update(req, res, next) {
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const browserInfo = req.headers['user-agent'] || 'Unknown Browser';
@@ -63,8 +70,14 @@ function update(req, res, next) {
     .catch(next);
 }
 function _delete(req, res, next) {
-    userService.delete(req.params.id)
-        .then(() => res.json({ message: 'User deleted' }))
+    // We create a "params" object with the IP and Browser info
+    const params = {
+        ipAddress: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+        browserInfo: req.headers['user-agent'] || 'Unknown Browser'
+    };
+
+    userService._delete(req.params.id, params)
+        .then(() => res.json({ message: 'User deleted successfully' }))
         .catch(next);
 }
 function createSchema(req, res, next) {
@@ -187,6 +200,11 @@ function getActivities(req, res, next) {
         endDate: req.query.endDate
     };
     userService.getUserActivities(req.params.id, filters)
+        .then(activities => res.json(activities))
+        .catch(next);
+}
+function getAllActivities(req, res, next) {
+    userService.getAllActivities()
         .then(activities => res.json(activities))
         .catch(next);
 }

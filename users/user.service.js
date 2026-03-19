@@ -8,7 +8,7 @@ module.exports = {
     getById,
     create,
     update,
-    delete: _delete,
+    _delete,
     search,
     searchAll,
     getPreferences,
@@ -17,6 +17,7 @@ module.exports = {
     login,
     logout,
     logActivity,
+    getAllActivities,
     getUserActivities,
     deactivate,
     reactivate,
@@ -46,7 +47,16 @@ async function create(params) {
     const user = new db.User(params);
     user.passwordHash = await bcrypt.hash(params.password, 10);
     await user.save();
+
+    // NEW LOGGING CODE
+    // Logs the creation event with IP, Browser, and the user's email
+    await logActivity(
+        user.id, 
+        'create', 
+        `IP Address: ${params.ipAddress}, Browser Info: ${params.browserInfo}, Details: Created user with email: ${user.email}`
+    );
 }
+
 async function update(id, params) {
     const user = await db.User.findByPk(id);
     const oldData = { ...user.get() }; // Snapshot before change
@@ -107,10 +117,22 @@ async function _delete(id) {
     await user.destroy();
 } 
 
-async function getUser(id) {
+async function _delete(id, params) {
     const user = await db.User.findByPk(id);
     if (!user) throw 'User not found';
-    return user;
+
+    // 1. Create the final "Delete" log
+    await logActivity(
+        id, 
+        'delete', 
+        `IP Address: ${params.ipAddress}, Browser Info: ${params.browserInfo}, Details: Deleted user: ${user.email}`
+    );
+
+    // 2. MANUALLY delete all logs for this user so the constraint doesn't fail
+    await db.ActivityLog.destroy({ where: { userId: id } });
+
+    // 3. Now delete the user
+    await user.destroy();
 }
 
 //SEARCH FUNCTIONS
@@ -278,4 +300,9 @@ async function getUserActivities(userId, filters = {}) {
     }
 
     return await db.ActivityLog.findAll({ where: whereClause });
+}
+async function getAllActivities() {
+    return await db.ActivityLog.findAll({ 
+        order: [['timestamp', 'DESC']] 
+    });
 }
